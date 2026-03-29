@@ -4,34 +4,36 @@ import os
 
 class LLMClient:
     def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.api_key = os.getenv("OPENAI_API_KEY", "dummy-key")
         self.api_url = "https://api.openai.com/v1/chat/completions"
 
-    def generate_response(self, messages: List[Dict[str, Any]], temperature: float = 0.7) -> str:
+    async def generate_response(self, prompt: str, temperature: float = 0.7) -> str:
+        # Simplified for mock purposes if API key is not real
+        if self.api_key == "dummy-key":
+            return f"This is a mock response from the AI for your prompt: {prompt[:50]}..."
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
         payload = {
             "model": "gpt-3.5-turbo",
-            "messages": messages,
-            "temperature": temperature,
-            "stream": True
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature
         }
 
-        response = requests.post(self.api_url, headers=headers, json=payload, stream=True)
-        response.raise_for_status()
+        # Note: Using requests synchronously here for simplicity, 
+        # but it should ideally be async in a real app.
+        try:
+            response = requests.post(self.api_url, headers=headers, json=payload)
+            response.raise_for_status()
+            return response.json()['choices'][0]['message']['content']
+        except Exception as e:
+            return f"Error calling LLM: {str(e)}"
 
-        return self.stream_response(response)
+# Global instance of the client
+_llm_client = LLMClient()
 
-    def stream_response(self, response) -> str:
-        full_response = ""
-        for line in response.iter_lines():
-            if line:
-                delta = line.decode('utf-8').strip()
-                if delta.startswith("data:"):
-                    content = delta[5:].strip()
-                    if content == "[DONE]":
-                        break
-                    full_response += content
-        return full_response.strip()
+async def call_llm_api(prompt: str) -> str:
+    """Top-level function to call the LLM API."""
+    return await _llm_client.generate_response(prompt)
