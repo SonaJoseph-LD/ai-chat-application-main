@@ -1,5 +1,5 @@
 {
-  "name": "ai-chat-rag-starter",
+  "name": "ai-chat-application-main",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,12 +13,14 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "tailwindcss": "latest",
-    "react-query": "latest"
+    "react-query": "latest",
+    "tailwindcss": "latest"
   },
   "devDependencies": {
-    "typescript": "latest",
+    "@types/node": "25.5.0",
+    "@types/react": "19.2.14",
     "eslint": "latest",
-    "prettier": "latest"
+    "prettier": "latest",
+    "typescript": "latest"
   }
 }

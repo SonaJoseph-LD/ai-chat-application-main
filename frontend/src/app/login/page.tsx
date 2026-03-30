@@ -1,5 +1,7 @@
+'use client';
+
 import { useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { login } from '../../lib/auth';
 
 const LoginPage = () => {
@@ -8,7 +10,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
