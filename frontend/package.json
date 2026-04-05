@@ -10,17 +10,19 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.96.2",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest",
-    "react-query": "latest",
-    "tailwindcss": "latest"
+    "react-dom": "latest"
   },
   "devDependencies": {
     "@types/node": "25.5.0",
     "@types/react": "19.2.14",
+    "autoprefixer": "^10.4.27",
     "eslint": "latest",
+    "postcss": "^8.5.8",
     "prettier": "latest",
+    "tailwindcss": "3.4.3",
     "typescript": "latest"
   }
 }

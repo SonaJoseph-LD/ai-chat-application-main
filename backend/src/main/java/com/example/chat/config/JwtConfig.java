@@ -30,7 +30,7 @@ public class JwtConfig {
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .setExpiration(new Date(System.currentTimeMillis() + (expiration * 1000)))
                 .signWith(SignatureAlgorithm.HS256, secret)
                 .compact();
     }
@@ -40,7 +40,7 @@ public class JwtConfig {
         return (extractedUsername.equals(username) && !isTokenExpired(token));
     }
 
-    private String extractUsername(String token) {
+    public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
     }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useQuery, useMutation } from 'react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import ChatWindow from '../../components/ChatWindow';
 import InputBox from '../../components/InputBox';
 import { fetchMessages, sendMessage } from '../../lib/api';
@@ -11,16 +11,20 @@ const ChatPage = () => {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
-  const { data: chatMessages, refetch } = useQuery(
-    ['messages', conversationId],
-    () => fetchMessages(conversationId!),
-    {
-      enabled: !!conversationId,
-      onSuccess: (data) => setMessages(data),
-    }
-  );
+  const { data: chatMessages, refetch } = useQuery({
+    queryKey: ['messages', conversationId],
+    queryFn: () => fetchMessages(conversationId!),
+    enabled: !!conversationId,
+  });
 
-  const mutation = useMutation(sendMessage, {
+  useEffect(() => {
+    if (chatMessages) {
+      setMessages(chatMessages);
+    }
+  }, [chatMessages]);
+
+  const mutation = useMutation({
+    mutationFn: sendMessage,
     onSuccess: (newMessage) => {
       setMessages((prev) => [...prev, newMessage]);
       refetch();

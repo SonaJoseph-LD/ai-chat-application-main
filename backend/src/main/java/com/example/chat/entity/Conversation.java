@@ -16,6 +16,7 @@ public class Conversation {
     private User user;
 
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonManagedReference
     private List<Message> messages;
 
     private String title;

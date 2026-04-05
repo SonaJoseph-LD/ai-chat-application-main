@@ -15,6 +15,7 @@
 /Users/sonajoseph/Documents/projects/ai-chat-application-main/backend/src/main/java/com/example/chat/service/AiClient.java
 /Users/sonajoseph/Documents/projects/ai-chat-application-main/backend/src/main/java/com/example/chat/repository/ConversationRepository.java
 /Users/sonajoseph/Documents/projects/ai-chat-application-main/backend/src/main/java/com/example/chat/repository/UserRepository.java
+/Users/sonajoseph/Documents/projects/ai-chat-application-main/backend/src/main/java/com/example/chat/config/DataSeeder.java
 /Users/sonajoseph/Documents/projects/ai-chat-application-main/backend/src/main/java/com/example/chat/config/SecurityConfig.java
 /Users/sonajoseph/Documents/projects/ai-chat-application-main/backend/src/main/java/com/example/chat/entity/User.java
 /Users/sonajoseph/Documents/projects/ai-chat-application-main/backend/src/main/java/com/example/chat/controller/ConversationController.java

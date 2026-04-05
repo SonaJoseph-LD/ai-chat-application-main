@@ -1,5 +1,5 @@
 import { Message, ChatMessage } from '../types';
-import { getToken } from './auth';
+import { getToken, getUser } from './auth';
 
 const API_BASE_URL = 'http://localhost:8080';
 
@@ -24,18 +24,24 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
 };
 
 export const sendMessage = async (data: { conversationId: string; text: string }): Promise<Message> => {
+  const user = getUser();
+  if (!user || !user.id) {
+    throw new Error('User not authenticated');
+  }
+
   const response = await fetch(`${API_BASE_URL}/messages`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
       conversationId: data.conversationId,
       content: data.text,
-      // The backend Message entity might need more fields like userId
+      userId: user.id
     }),
   });
 
   if (!response.ok) {
-    throw new Error('Failed to send message');
+    const errorText = await response.text();
+    throw new Error(errorText || 'Failed to send message');
   }
 
   return response.json();

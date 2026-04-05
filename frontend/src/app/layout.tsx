@@ -14,12 +14,12 @@ export const metadata = {
 const RootLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <html lang="en" className={inter.className}>
-      <body className="flex h-screen overflow-hidden">
-        <Providers>
+      <Providers>
+        <body className="flex h-screen overflow-hidden">
           <Sidebar />
           <main className="flex-1 overflow-auto bg-gray-100">{children}</main>
-        </Providers>
-      </body>
+        </body>
+      </Providers>
     </html>
   );
 };

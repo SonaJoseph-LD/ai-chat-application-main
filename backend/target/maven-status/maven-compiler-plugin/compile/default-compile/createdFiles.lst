@@ -3,6 +3,8 @@ com/example/chat/web/dto/AuthDtos$LoginRequest.class
 com/example/chat/controller/AuthController.class
 com/example/chat/service/AuthService.class
 com/example/chat/entity/Conversation.class
+com/example/chat/controller/MessageController$MessageRequest.class
+com/example/chat/config/DataSeeder.class
 com/example/chat/web/dto/ConversationDtos$MessageResponse.class
 com/example/chat/web/dto/ConversationDtos$CreateConversationRequest.class
 com/example/chat/config/JwtConfig.class

@@ -1,5 +1,7 @@
 package com.example.chat.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private final JwtConfig jwtConfig;
 
     public JwtAuthenticationFilter(JwtConfig jwtConfig) {
@@ -31,23 +34,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7);
             try {
-                // In a real app, you'd extract the username from the token
-                // For simplicity, let's assume the validateToken works or we extract it
-                // Using the JwtConfig we have
-                // Note: JwtConfig.validateToken needs a username, but here we only have the token
-                // We might need to modify JwtConfig or use it differently
+                username = jwtConfig.extractUsername(jwt);
+                logger.debug("Extracted username from JWT: {}", username);
             } catch (Exception e) {
-                // Token extraction failed
+                logger.error("Failed to extract username from JWT: {}", e.getMessage());
             }
         }
 
-        // Simplified for this task: if token exists, we just set a dummy auth for now 
-        // Or better, let's try to do it properly with what's in JwtConfig
-        
-        // Actually, looking at JwtConfig, it has extractAllClaims but it's private.
-        // I'll assume we can use it if I made it public, but for now let's just 
-        // implement a basic version that allows the app to compile.
-        
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                    username, null, new ArrayList<>());
+            authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        }
+
         filterChain.doFilter(request, response);
     }
 }
