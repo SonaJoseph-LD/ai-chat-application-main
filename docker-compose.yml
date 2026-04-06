@@ -10,7 +10,7 @@ services:
     depends_on:
       - backend
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8080
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
   backend:
     build:
@@ -21,10 +21,10 @@ services:
     depends_on:
       - postgres
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/chatdb
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
-      - JWT_SECRET=your_jwt_secret
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
 
   ai-service:
     build:
@@ -33,16 +33,16 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - OPENAI_API_KEY=your_openai_api_key
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
 
   postgres:
     image: postgres:13
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=chatdb
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

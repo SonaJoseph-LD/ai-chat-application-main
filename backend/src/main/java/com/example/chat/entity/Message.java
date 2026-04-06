@@ -16,7 +16,7 @@ public class Message {
     @com.fasterxml.jackson.annotation.JsonBackReference
     private Conversation conversation;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(nullable = false)

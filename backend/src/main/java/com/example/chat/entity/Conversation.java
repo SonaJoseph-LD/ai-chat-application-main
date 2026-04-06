@@ -19,6 +19,7 @@ public class Conversation {
     @com.fasterxml.jackson.annotation.JsonManagedReference
     private List<Message> messages;
 
+    @Column(length = 500)
     private String title;
 
     public Conversation() {

@@ -1,7 +1,7 @@
 import { Message, ChatMessage } from '../types';
 import { getToken, getUser } from './auth';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 const getHeaders = () => {
   const token = getToken();

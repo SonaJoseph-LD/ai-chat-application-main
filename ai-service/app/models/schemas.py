@@ -15,7 +15,7 @@ class ConversationSchema(BaseModel):
     messages: List[MessageSchema]
 
 class UserSchema(BaseModel):
-    id: int
+    id: int 
     username: str
     email: str
 
