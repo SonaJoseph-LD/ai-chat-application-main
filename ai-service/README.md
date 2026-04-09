@@ -11,14 +11,22 @@ This directory contains the FastAPI service for the AI chat application, which h
 - `app/core/llm.py`: Logic for interacting with the LLM API.
 - `app/core/rag.py`: Logic for retrieving relevant past messages.
 - `app/db/vector_store.py`: Logic for interacting with the vector database.
-- `app/models/schemas.py`: Data models and schemas for the AI service.
+- `app/db/vector_store.py`: Logic for interacting with Qdrant vector database.
+
+## Tech Details
+
+### Vector Database: Qdrant
+- **Collection Name**: `messages`
+- **Distance Metric**: `Cosine Similarity`
+- **Embedding Model**: `all-MiniLM-L6-v2` (384 dimensions)
+- **Features**: Automatic collection creation, local persistence (if running in Docker or connected to a remote host), and in-memory fallback.
 
 ## Setup Instructions
 
 1. **Clone the Repository**
    ```bash
    git clone <repository-url>
-   cd ai-chat-rag-starter/ai-service
+   cd ai-chat-application-main/ai-service
    ```
 
 2. **Create a Virtual Environment**
@@ -28,8 +36,9 @@ This directory contains the FastAPI service for the AI chat application, which h
    ```
 
 3. **Install Dependencies**
+   The project uses `poetry` or `pip`. If using `pip`:
    ```bash
-   pip install -r requirements.txt
+   pip install fastapi uvicorn pydantic qdrant-client sentence-transformers requests
    ```
 
 4. **Run the Application**
@@ -42,10 +51,21 @@ This directory contains the FastAPI service for the AI chat application, which h
 
 ## Environment Variables
 
-Make sure to set the following environment variables for the AI service:
+The AI service uses the following variables:
 
-- `OPENAI_API_KEY`: Your API key for accessing the OpenAI API.
-- `VECTOR_DB_URL`: Connection string for the vector database.
+- `OPENAI_API_KEY`: OpenAI API key. If not provided, the service will attempt to use a local Ollama instance (`http://localhost:11434`).
+- `QDRANT_HOST`: Host for Qdrant (default: `localhost`).
+- `QDRANT_PORT`: Port for Qdrant (default: `6333`).
+
+## Monitoring AI Operations
+
+The service provides verbose console output for every chat request. You can see the RAG flow step-by-step:
+1. Embedding generation from text.
+2. Similarity search in Qdrant.
+3. Relevant context retrieval.
+4. LLM prompt composition.
+5. Final LLM response.
+
 
 ## Usage
 

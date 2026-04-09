@@ -17,9 +17,21 @@ except ImportError:
         norm_b = np.linalg.norm(b, axis=1, keepdims=True)
         return dot_product / (norm_a * norm_b.T)
 
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
 class EmbeddingService:
-    def __init__(self, model=None):
-        self.model = model
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        if SENTENCE_TRANSFORMERS_AVAILABLE:
+            print(f"Loading embedding model: {model_name}...")
+            self.model = SentenceTransformer(model_name)
+            print(f"Model loaded.")
+        else:
+            print("Warning: sentence-transformers not available, using dummy embeddings.")
+            self.model = None
         self.embeddings = {}
 
     def generate_embedding(self, text: str) -> List[float]:

@@ -17,6 +17,7 @@ class LLMClient:
             print(f"Using local Ollama at {self.api_url}")
 
     async def generate_response(self, prompt: str, temperature: float = 0.7) -> str:
+        print(f"   [LLM] Calling {self.model} at {self.api_url}...")
         headers = {
             "Content-Type": "application/json"
         }
@@ -35,8 +36,11 @@ class LLMClient:
             # Set a timeout so the app doesn't hang if the AI is slow
             response = requests.post(self.api_url, headers=headers, json=payload, timeout=60)
             response.raise_for_status()
-            return response.json()['message']['content']
+            result = response.json()['message']['content'] if 'message' in response.json() else response.json()['choices'][0]['message']['content']
+            print(f"   [LLM] Success. Response length: {len(result)}")
+            return result
         except Exception as e:
+            print(f"   [LLM] Error: {e}")
             # If we hit a 429 or other error with OpenAI, let the user know
             if "openai.com" in self.api_url:
                 return f"Error from OpenAI (Check billing/quota): {str(e)}"

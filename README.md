@@ -6,19 +6,23 @@ This project is a full-stack AI chat application that utilizes context memory fo
 
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, React Query
 - **Backend**: Java Spring Boot, PostgreSQL, JPA/Hibernate, JWT Authentication
-- **AI Service**: Python FastAPI, OpenAI API (or compatible LLM), Vector database (FAISS or ChromaDB)
+- **AI Service**: Python FastAPI, OpenAI API (or local Ollama), Qdrant Vector Database, Sentence-Transformers
 
 ## Core Features
 
 1. **Chat System**: 
    - Create and manage conversations
    - Send messages and receive AI responses
-   - Stream responses token-by-token
+   - Intelligent RAG-based context injection
 
-2. **Context Memory (RAG)**:
-   - Store embeddings for each message
-   - Retrieve relevant past messages per query
-   - Inject retrieved context into LLM prompt
+2. **Context Memory (Qdrant RAG)**:
+   - Real-time vector embeddings using `all-MiniLM-L6-v2`
+   - High-performance similarity search with Qdrant
+   - Persistent storage for long-term conversation context
+
+3. **AI Operation Visibility**:
+   - Detailed logging of the RAG pipeline
+   - Real-time monitoring of vector searches and LLM calls
 
 3. **Conversation History**:
    - Sidebar with conversation list
@@ -94,11 +98,30 @@ ai-chat-rag-starter
      uvicorn app.main:app --reload
      ```
 
-5. **Docker Setup** (optional):
-   - Run all services using Docker Compose:
+5. **Docker Setup** (Recommended):
+   - Run all services, including **Qdrant**, using Docker Compose:
+     ```bash
+     docker-compose up --build
      ```
-     docker-compose up
-     ```
+   - This is the easiest way to see all components working together.
+
+## Viewing AI Operations
+
+The AI service is configured with verbose logging to help you see exactly what's happening "under the hood" during a chat.
+
+### How to view the logs:
+1. If running via Docker:
+   ```bash
+   docker logs -f ai-chat-application-main-ai-service-1
+   ```
+2. If running locally, the output will appear directly in your terminal where `uvicorn` is running.
+
+### What you will see:
+When a message is sent, the logs will show:
+- **Embedding Generation**: Confirmation that the message is being converted to a 384-dimension vector.
+- **Qdrant Storage**: Details of the message being upserted into the `messages` collection.
+- **Qdrant Search**: Logs of the similarity search used to find relevant context from previous turns.
+- **LLM Call**: The final prompt being sent to OpenAI or Ollama, including the injected context.
 
 ## Environment Variables
 
