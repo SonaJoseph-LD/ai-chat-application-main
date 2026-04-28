@@ -19,7 +19,7 @@ class VectorStore:
             qdrant_port = int(os.getenv("QDRANT_PORT", 6333))
             try:
                 # Try to connect to a remote Qdrant instance, fallback to in-memory if it fails
-                self.client = QdrantClient(host=qdrant_host, port=qdrant_port)
+                self.client = QdrantClient(host=qdrant_host, port=qdrant_port, check_compatibility=False)
                 # Check if collection exists, if not create it
                 collections = self.client.get_collections().collections
                 exists = any(c.name == self.collection_name for c in collections)
@@ -60,23 +60,37 @@ class VectorStore:
             self.embeddings.append(embedding)
             self.metadata.append(meta)
 
-    def search(self, query_embedding: List[float], k: int = 5) -> List[Dict]:
-        print(f"   [VectorStore] Searching for top {k} nearest neighbors")
+    def search(self, query_embedding: List[float], k: int = 5, user_id: Optional[str] = None) -> List[Dict]:
+        print(f"   [VectorStore] Searching for top {k} nearest neighbors for user: {user_id}")
         if self.client:
             try:
+                search_query = {
+                    "collection_name": self.collection_name,
+                    "limit": k
+                }
+                
+                if user_id:
+                    from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+                    search_query["query_filter"] = Filter(
+                        must=[
+                            FieldCondition(
+                                key="user_id",
+                                match=MatchValue(value=user_id)
+                            )
+                        ]
+                    )
+
                 # Try the newer query_points API first (v1.10+)
                 if hasattr(self.client, "query_points"):
                     search_result = self.client.query_points(
-                        collection_name=self.collection_name,
                         query=query_embedding,
-                        limit=k
+                        **search_query
                     ).points
                 else:
                     # Fallback to the traditional search API
                     search_result = self.client.search(
-                        collection_name=self.collection_name,
                         query_vector=query_embedding,
-                        limit=k
+                        **search_query
                     )
                 print(f"   [VectorStore] Found {len(search_result)} matches")
                 return [hit.payload for hit in search_result]
@@ -85,7 +99,7 @@ class VectorStore:
                 return []
         else:
             # Simple fallback if qdrant is not available
-            return self.metadata[:k]
+            return [m for m in self.metadata if not user_id or m.get("user_id") == user_id][:k]
 
     def get_embeddings(self) -> List[List[float]]:
         if self.client:

@@ -36,6 +36,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 username = jwtConfig.extractUsername(jwt);
                 logger.debug("Extracted username from JWT: {}", username);
+            } catch (io.jsonwebtoken.ExpiredJwtException e) {
+                logger.warn("JWT expired: {}", e.getMessage());
             } catch (Exception e) {
                 logger.error("Failed to extract username from JWT: {}", e.getMessage());
             }

@@ -6,17 +6,17 @@ class RAG:
     def __init__(self, vector_store: VectorStore):
         self.vector_store = vector_store
 
-    def store_message_embedding(self, conversation_id: str, message: str) -> None:
+    def store_message_embedding(self, user_id: str, message: str) -> None:
         embedding = generate_embedding(message)
-        self.vector_store.add(embedding, {"message": message, "conversation_id": conversation_id})
+        self.vector_store.add(embedding, {"message": message, "user_id": user_id, "type": "chat"})
 
-    def retrieve_relevant_context(self, query: str, top_k: int = 5) -> List[Dict[str, str]]:
+    def retrieve_relevant_context(self, user_id: str, query: str, top_k: int = 5) -> List[Dict[str, str]]:
         query_embedding = generate_embedding(query)
-        relevant_messages = self.vector_store.search(query_embedding, top_k)
+        relevant_messages = self.vector_store.search(query_embedding, top_k, user_id=user_id)
         return relevant_messages
 
-    def build_prompt_with_context(self, query: str) -> str:
-        relevant_context = self.retrieve_relevant_context(query)
+    def build_prompt_with_context(self, user_id: str, query: str) -> str:
+        relevant_context = self.retrieve_relevant_context(user_id, query)
         context_messages = "\n".join([msg['message'] for msg in relevant_context])
         prompt = f"Context:\n{context_messages}\n\nUser Query: {query}"
         return prompt
@@ -27,6 +27,24 @@ _rag = RAG(_vector_store)
 
 def retrieve_relevant_context(user_id: str, query_embedding: List[float], top_k: int = 5) -> str:
     """Top-level function to retrieve context as a formatted string."""
-    relevant_messages = _vector_store.search(query_embedding, top_k)
-    context_messages = "\n".join([msg['message'] for msg in relevant_messages if 'message' in msg])
-    return f"Context from previous messages:\n{context_messages}" if context_messages else ""
+    relevant_messages = _vector_store.search(query_embedding, top_k, user_id=user_id)
+    
+    chat_context = []
+    doc_context = []
+    
+    for msg in relevant_messages:
+        content = msg.get('message', '')
+        if not content: continue
+        
+        if msg.get('type') == 'document':
+            doc_context.append(f"[From document {msg.get('source', 'unknown')}]: {content}")
+        else:
+            chat_context.append(content)
+            
+    context_str = ""
+    if doc_context:
+        context_str += "Context from uploaded documents:\n" + "\n".join(doc_context) + "\n\n"
+    if chat_context:
+        context_str += "Context from previous messages:\n" + "\n".join(chat_context)
+        
+    return context_str if context_str else ""
