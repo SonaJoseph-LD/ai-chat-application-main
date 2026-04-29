@@ -1,24 +1,30 @@
 # AI Chat RAG Starter - AI Service
 
-This directory contains the FastAPI service for the AI chat application, which handles chat requests and integrates with the OpenAI API for generating responses.
+This directory contains the FastAPI service for the AI chat application, which handles chat requests and integrates with the OpenAI API for generating responses using **LangChain**.
 
 ## Project Structure
 
 - `app/main.py`: Entry point for the FastAPI application.
-- `app/api/chat.py`: Endpoint for handling chat requests.
-- `app/core/config.py`: Configuration settings for the AI service.
-- `app/core/embeddings.py`: Logic for generating embeddings for messages.
-- `app/core/llm.py`: Logic for interacting with the LLM API.
-- `app/core/rag.py`: Logic for retrieving relevant past messages.
-- `app/db/vector_store.py`: Logic for interacting with the vector database.
-- `app/db/vector_store.py`: Logic for interacting with Qdrant vector database.
+- `app/api/chat.py`: Endpoint for handling chat requests, utilizing LangChain chains.
+- `app/api/documents.py`: Endpoint for document upload and ingestion using LangChain loaders and splitters.
+- `app/core/embeddings.py`: LangChain wrapper for HuggingFace embeddings.
+- `app/core/llm.py`: Unified LangChain interface for OpenAI and Ollama.
+- `app/core/rag.py`: Core RAG orchestration using **LangChain Expression Language (LCEL)**.
+- `app/db/vector_store.py`: LangChain integration with the Qdrant vector database.
 
 ## Tech Details
+
+### Framework: LangChain
+- **Orchestration**: LCEL (LangChain Expression Language) for building flexible RAG chains.
+- **Embeddings**: `langchain-huggingface` with `all-MiniLM-L6-v2` (384 dimensions).
+- **Vector Store**: `langchain-qdrant` for high-performance similarity search.
+- **LLM Support**: `ChatOpenAI` and `ChatOllama` (via `langchain-community`).
+- **Document Loading**: `PyPDFLoader`, `CSVLoader`, and `TextLoader`.
+- **Text Splitting**: `RecursiveCharacterTextSplitter` for semantic chunking.
 
 ### Vector Database: Qdrant
 - **Collection Name**: `messages`
 - **Distance Metric**: `Cosine Similarity`
-- **Embedding Model**: `all-MiniLM-L6-v2` (384 dimensions)
 - **Features**: Automatic collection creation, local persistence (if running in Docker or connected to a remote host), and in-memory fallback.
 
 ## Setup Instructions
@@ -36,9 +42,9 @@ This directory contains the FastAPI service for the AI chat application, which h
    ```
 
 3. **Install Dependencies**
-   The project uses `poetry` or `pip`. If using `pip`:
+   The project uses `poetry`. If using `pip`, ensure you have the core LangChain ecosystem packages:
    ```bash
-   pip install fastapi uvicorn pydantic qdrant-client sentence-transformers requests
+   pip install fastapi uvicorn pydantic qdrant-client langchain langchain-openai langchain-community langchain-huggingface langchain-qdrant pypdf pandas
    ```
 
 4. **Run the Application**
