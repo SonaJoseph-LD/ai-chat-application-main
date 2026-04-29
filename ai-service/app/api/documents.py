@@ -1,14 +1,10 @@
+import os
+import tempfile
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import List
-import io
-import pandas as pd
-try:
-    import pypdf
-except ImportError:
-    import PyPDF2 as pypdf
-from app.core.embeddings import generate_embedding
-from app.core.rag import _rag
-from app.db.vector_store import VectorStore
+from langchain_community.document_loaders import PyPDFLoader, CSVLoader, TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from app.db.vector_store import get_vector_store
 
 router = APIRouter()
 
@@ -17,39 +13,54 @@ async def upload_document(
     user_id: str = Form(...),
     file: UploadFile = File(...)
 ):
+    temp_file_path = None
     try:
-        content = await file.read()
-        filename = file.filename
-        text = ""
+        # Create a temporary file to store the upload
+        suffix = os.path.splitext(file.filename)[1]
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(await file.read())
+            temp_file_path = tmp.name
 
-        if filename.endswith(".pdf"):
-            pdf_reader = pypdf.PdfReader(io.BytesIO(content))
-            for page in pdf_reader.pages:
-                text += page.extract_text() + "\n"
-        elif filename.endswith(".csv"):
-            df = pd.read_csv(io.BytesIO(content))
-            text = df.to_string()
-        elif filename.endswith(".txt"):
-            text = content.decode("utf-8")
+        # Choose the right loader
+        if file.filename.endswith(".pdf"):
+            loader = PyPDFLoader(temp_file_path)
+        elif file.filename.endswith(".csv"):
+            loader = CSVLoader(temp_file_path)
+        elif file.filename.endswith(".txt"):
+            loader = TextLoader(temp_file_path)
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format")
 
-        if not text.strip():
-            raise HTTPException(status_code=400, detail="Document is empty")
-
-        # Split text into chunks (simple version for now)
-        chunks = [text[i:i+1000] for i in range(0, len(text), 1000)]
+        # Load the document
+        docs = loader.load()
         
-        for chunk in chunks:
-            embedding = generate_embedding(chunk)
-            _rag.vector_store.add(embedding, {
-                "message": chunk, 
-                "user_id": user_id, 
-                "source": filename,
+        # Split into chunks
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=100
+        )
+        split_docs = text_splitter.split_documents(docs)
+        
+        # Add metadata
+        for doc in split_docs:
+            doc.metadata.update({
+                "user_id": user_id,
+                "source": file.filename,
                 "type": "document"
             })
 
-        return {"message": f"Document {filename} uploaded and processed successfully", "chunks": len(chunks)}
+        # Ingest into Vector Store
+        vector_store = get_vector_store()
+        vector_store.add_documents(split_docs)
+
+        return {
+            "message": f"Document {file.filename} uploaded and processed successfully", 
+            "chunks": len(split_docs)
+        }
     except Exception as e:
         print(f"Error processing document: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup temp file
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)

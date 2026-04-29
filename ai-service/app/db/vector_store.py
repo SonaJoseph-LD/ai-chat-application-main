@@ -1,115 +1,39 @@
-from typing import List, Dict, Optional
 import os
-import uuid
-try:
-    from qdrant_client import QdrantClient
-    from qdrant_client.http.models import Distance, VectorParams, PointStruct
-    QDRANT_AVAILABLE = True
-except ImportError:
-    QDRANT_AVAILABLE = False
+from typing import List, Dict, Optional
+from qdrant_client import QdrantClient
+from langchain_qdrant import QdrantVectorStore
+from app.core.embeddings import get_embeddings_model
 
-class VectorStore:
-    def __init__(self, dimension: int, collection_name: str = "messages"):
-        self.dimension = dimension
+class VectorStoreProvider:
+    def __init__(self, collection_name: str = "messages"):
         self.collection_name = collection_name
-        self.client = None
+        self.embeddings = get_embeddings_model()
         
-        if QDRANT_AVAILABLE:
-            qdrant_host = os.getenv("QDRANT_HOST", "localhost")
-            qdrant_port = int(os.getenv("QDRANT_PORT", 6333))
-            try:
-                # Try to connect to a remote Qdrant instance, fallback to in-memory if it fails
-                self.client = QdrantClient(host=qdrant_host, port=qdrant_port, check_compatibility=False)
-                # Check if collection exists, if not create it
-                collections = self.client.get_collections().collections
-                exists = any(c.name == self.collection_name for c in collections)
-                if not exists:
-                    self.client.create_collection(
-                        collection_name=self.collection_name,
-                        vectors_config=VectorParams(size=dimension, distance=Distance.COSINE),
-                    )
-                print(f"Connected to Qdrant at {qdrant_host}:{qdrant_port}")
-            except Exception as e:
-                print(f"Failed to connect to Qdrant, using in-memory Qdrant: {e}")
-                self.client = QdrantClient(":memory:")
-                self.client.create_collection(
-                    collection_name=self.collection_name,
-                    vectors_config=VectorParams(size=dimension, distance=Distance.COSINE),
-                )
-        else:
-            print("Qdrant client not available, please install 'qdrant-client'")
-            self.client = None
-            self.embeddings = []
-            self.metadata = []
+        qdrant_host = os.getenv("QDRANT_HOST", "localhost")
+        qdrant_port = int(os.getenv("QDRANT_PORT", 6333))
+        
+        try:
+            # Try to connect to a remote Qdrant instance
+            self.client = QdrantClient(host=qdrant_host, port=qdrant_port, check_compatibility=False)
+            # Check if collection exists
+            self.client.get_collections()
+            print(f"Connected to Qdrant at {qdrant_host}:{qdrant_port}")
+        except Exception as e:
+            print(f"Failed to connect to Qdrant, using in-memory Qdrant: {e}")
+            self.client = QdrantClient(":memory:")
 
-    def add(self, embedding: List[float], meta: Dict):
-        print(f"   [VectorStore] Adding vector with metadata: {meta}")
-        if self.client:
-            point_id = str(uuid.uuid4())
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=[
-                    PointStruct(
-                        id=point_id,
-                        vector=embedding,
-                        payload=meta
-                    )
-                ]
-            )
-        else:
-            self.embeddings.append(embedding)
-            self.metadata.append(meta)
+        self.vector_store = QdrantVectorStore(
+            client=self.client,
+            collection_name=self.collection_name,
+            embedding=self.embeddings,
+        )
 
-    def search(self, query_embedding: List[float], k: int = 5, user_id: Optional[str] = None) -> List[Dict]:
-        print(f"   [VectorStore] Searching for top {k} nearest neighbors for user: {user_id}")
-        if self.client:
-            try:
-                search_query = {
-                    "collection_name": self.collection_name,
-                    "limit": k
-                }
-                
-                if user_id:
-                    from qdrant_client.http.models import Filter, FieldCondition, MatchValue
-                    search_query["query_filter"] = Filter(
-                        must=[
-                            FieldCondition(
-                                key="user_id",
-                                match=MatchValue(value=user_id)
-                            )
-                        ]
-                    )
+    def get_vector_store(self) -> QdrantVectorStore:
+        return self.vector_store
 
-                # Try the newer query_points API first (v1.10+)
-                if hasattr(self.client, "query_points"):
-                    search_result = self.client.query_points(
-                        query=query_embedding,
-                        **search_query
-                    ).points
-                else:
-                    # Fallback to the traditional search API
-                    search_result = self.client.search(
-                        query_vector=query_embedding,
-                        **search_query
-                    )
-                print(f"   [VectorStore] Found {len(search_result)} matches")
-                return [hit.payload for hit in search_result]
-            except Exception as e:
-                print(f"   [VectorStore] Error during search: {e}")
-                return []
-        else:
-            # Simple fallback if qdrant is not available
-            return [m for m in self.metadata if not user_id or m.get("user_id") == user_id][:k]
+# Global instance
+_provider = VectorStoreProvider()
 
-    def get_embeddings(self) -> List[List[float]]:
-        if self.client:
-            # This is not efficient for large collections, but for debugging/small scale:
-            points = self.client.scroll(collection_name=self.collection_name, with_vectors=True)[0]
-            return [p.vector for p in points]
-        return self.embeddings
-
-    def get_metadata(self) -> List[Dict]:
-        if self.client:
-            points = self.client.scroll(collection_name=self.collection_name)[0]
-            return [p.payload for p in points]
-        return self.metadata
+def get_vector_store() -> QdrantVectorStore:
+    """Returns the LangChain QdrantVectorStore instance."""
+    return _provider.get_vector_store()

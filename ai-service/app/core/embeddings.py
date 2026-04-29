@@ -1,68 +1,15 @@
 from typing import List
-import numpy as np
-
-try:
-    from sklearn.metrics.pairwise import cosine_similarity
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
-    def cosine_similarity(a, b):
-        # Fallback simple cosine similarity
-        a = np.array(a)
-        b = np.array(b)
-        if len(a.shape) == 1: a = a.reshape(1, -1)
-        if len(b.shape) == 1: b = b.reshape(1, -1)
-        dot_product = np.dot(a, b.T)
-        norm_a = np.linalg.norm(a, axis=1, keepdims=True)
-        norm_b = np.linalg.norm(b, axis=1, keepdims=True)
-        return dot_product / (norm_a * norm_b.T)
-
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+from langchain_huggingface import HuggingFaceEmbeddings
 
 class EmbeddingService:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            print(f"Loading embedding model: {model_name}...")
-            self.model = SentenceTransformer(model_name)
-            print(f"Model loaded.")
-        else:
-            print("Warning: sentence-transformers not available, using dummy embeddings.")
-            self.model = None
-        self.embeddings = {}
+        print(f"Loading LangChain HuggingFaceEmbeddings: {model_name}...")
+        self.embeddings = HuggingFaceEmbeddings(model_name=model_name)
+        print(f"Model loaded.")
 
     def generate_embedding(self, text: str) -> List[float]:
-        """Generate an embedding for the given text using the specified model."""
-        if self.model is None:
-            # Return a dummy embedding if no model is provided
-            return [0.0] * 384
-        return self.model.encode(text).tolist()
-
-    def store_embedding(self, conversation_id: str, message_id: str, embedding: List[float]):
-        """Store the embedding for a specific message in a conversation."""
-        if conversation_id not in self.embeddings:
-            self.embeddings[conversation_id] = {}
-        self.embeddings[conversation_id][message_id] = embedding
-
-    def retrieve_similar_embeddings(self, conversation_id: str, query_embedding: List[float], top_n: int = 5) -> List[str]:
-        """Retrieve the most similar message embeddings for a given query embedding."""
-        if conversation_id not in self.embeddings:
-            return []
-
-        embeddings_dict = self.embeddings[conversation_id]
-        if not embeddings_dict:
-            return []
-            
-        message_ids = list(embeddings_dict.keys())
-        embeddings_list = list(embeddings_dict.values())
-        
-        similarities = cosine_similarity([query_embedding], embeddings_list)[0]
-        similar_indices = np.argsort(similarities)[-top_n:][::-1]
-        
-        return [message_ids[i] for i in similar_indices]
+        """Generate an embedding for the given text."""
+        return self.embeddings.embed_query(text)
 
 # Global instance of the service
 _service = EmbeddingService()
@@ -70,3 +17,7 @@ _service = EmbeddingService()
 def generate_embedding(text: str) -> List[float]:
     """Top-level function to generate an embedding for the given text."""
     return _service.generate_embedding(text)
+
+def get_embeddings_model():
+    """Returns the LangChain embeddings model instance."""
+    return _service.embeddings

@@ -27,22 +27,23 @@ This project implements a **full-stack AI chat application** with a modular, lay
   - Acts as a gateway to the AI service for chat processing.
 - **External Dependencies:** PostgreSQL, H2, Spring Security, JWT.
 
-### 1.3 AI Service (FastAPI)
-- **Purpose:** Handles AI chat logic, including prompt generation, embedding, retrieval, and LLM API calls.
+### 1.3 AI Service (FastAPI + LangChain)
+- **Purpose:** Handles AI chat logic using LangChain for orchestration, embedding, retrieval, and LLM communication.
 - **Key Components:**
   - `main.py`: FastAPI app with CORS middleware.
-  - `api/chat.py`: API endpoint `/chat` for chat requests.
-  - `core/embeddings.py`: Embedding generation.
-  - `core/rag.py`: Retrieval-Augmented Generation (RAG) logic.
-  - `core/llm.py`: Calls to external LLM APIs (OpenAI or local).
-  - `db/vector_store.py`: Vector store for similarity search (FAISS or fallback).
+  - `api/chat.py`: API endpoint `/chat` utilizing LangChain LCEL chains.
+  - `api/documents.py`: Document ingestion using LangChain Loaders and Splitters.
+  - `core/embeddings.py`: `HuggingFaceEmbeddings` integration.
+  - `core/rag.py`: RAG orchestration via LangChain Expression Language (LCEL).
+  - `core/llm.py`: Unified interface for `ChatOpenAI` and `ChatOllama`.
+  - `db/vector_store.py`: `QdrantVectorStore` for similarity search.
 - **Interactions:**
   - Receives chat requests from backend or frontend.
-  - Generates embeddings for messages.
-  - Retrieves relevant context via vector similarity.
-  - Calls LLM API with context and user message.
-  - Stores message embeddings for future retrieval.
-- **External Dependencies:** FastAPI, FAISS (optional), OpenAI SDK, numpy, scikit-learn.
+  - Generates embeddings via LangChain.
+  - Retrieves relevant context via LangChain Retrievers.
+  - Orchestrates the full prompt-to-response pipeline via LCEL.
+  - Stores message embeddings in Qdrant.
+- **External Dependencies:** FastAPI, LangChain, Qdrant Client, OpenAI SDK, HuggingFace.
 
 ---
 
@@ -67,25 +68,23 @@ This project implements a **full-stack AI chat application** with a modular, lay
 - **`app/main.py`:** FastAPI app setup, CORS, route inclusion.
 - **`api/chat.py`:** Main chat endpoint:
   - Receives user message.
-  - Calls core logic to generate embedding.
-  - Retrieves relevant context via RAG.
-  - Constructs prompt.
-  - Calls LLM API.
-  - Returns response.
-- **`core/embeddings.py`:** Embedding generation:
-  - Uses a model (e.g., sentence transformer).
-  - Stores embeddings in memory or vector store.
-- **`core/rag.py`:** Retrieval-augmented generation:
-  - Stores message embeddings.
-  - Retrieves similar past messages based on embedding similarity.
-  - Builds context string for prompt.
-- **`core/llm.py`:** Calls external LLM APIs:
-  - Supports OpenAI or local models.
-  - Handles request/response, errors.
-- **`db/vector_store.py`:** Vector similarity search:
-  - Uses FAISS if available.
-  - Fallback to simple list search.
-  - Stores embeddings and metadata.
+  - Invokes the LangChain LCEL chain.
+  - Returns AI response.
+- **`api/documents.py`:** Document ingestion endpoint:
+  - Uses `PyPDFLoader`, `CSVLoader`, or `TextLoader` to parse files.
+  - Uses `RecursiveCharacterTextSplitter` for semantic chunking.
+  - Adds documents to `QdrantVectorStore`.
+- **`core/embeddings.py`:** LangChain Embedding wrapper:
+  - Uses `HuggingFaceEmbeddings` (`all-MiniLM-L6-v2`).
+- **`core/rag.py`:** RAG orchestration via LCEL:
+  - Defines `ChatPromptTemplate`.
+  - Configures `VectorStoreRetriever`.
+  - Builds the `(Retriever | Prompt | LLM | Parser)` chain.
+- **`core/llm.py`:** LangChain Chat Models:
+  - Provides `ChatOpenAI` or `ChatOllama` based on configuration.
+- **`db/vector_store.py`:** LangChain Qdrant Integration:
+  - Connects to Qdrant.
+  - Provides a standardized `QdrantVectorStore` instance.
 
 ---
 
@@ -105,16 +104,14 @@ This project implements a **full-stack AI chat application** with a modular, lay
 - **AI Processing:**
   - Backend forwards message to FastAPI `/chat`.
   - `chat.py`:
-    - Calls `generate_embedding`.
-    - Stores embedding via `rag.store_message_embedding`.
-    - Retrieves relevant context via `rag.retrieve_relevant_context`.
-    - Builds prompt.
-    - Calls `call_llm_api`.
+    - Stores incoming message via `_rag.store_message_embedding` (for future context).
+    - Retrieves the LCEL chain via `get_rag_chain(user_id)`.
+    - Invokes the chain (`chain.ainvoke`).
+    - The chain automatically retrieves context from Qdrant, formats the prompt, calls the LLM, and parses the result.
     - Sends response back to backend.
 - **Response Delivery:**
   - Backend returns AI response.
   - Frontend displays message.
-  - Embeddings are stored for future retrieval.
 
 ---
 
@@ -125,25 +122,24 @@ This project implements a **full-stack AI chat application** with a modular, lay
   - API layer (`api/`)
   - Core logic (`core/`)
   - Data storage (`db/`)
-- Supports easy extension (e.g., adding new embedding models or vector stores).
+- Supports easy extension via LangChain components.
 
 ### 4.2 Extensibility
-- Embedding and LLM modules are pluggable.
-- Vector store can switch between FAISS and simple list.
+- Embedding and LLM modules are standardized using LangChain interfaces.
+- Vector store can be easily swapped for any other LangChain-supported vector database.
 - Frontend is decoupled from backend logic via REST API.
 
 ### 4.3 Runtime Dynamics
 - **Frontend**: React app running in browser.
 - **Backend**: Spring Boot server managing user sessions and data.
-- **AI Service**: FastAPI app running independently, invoked by backend or directly by frontend.
-- **Vector Store**: In-memory or FAISS index for similarity search, persists embeddings.
+- **AI Service**: FastAPI app running independently, utilizing LangChain for intelligent retrieval.
+- **Vector Store**: Qdrant instance for similarity search.
 
 ---
 
 # 5. Missing or Uncertain Details
 - Exact communication protocol between backend and AI service (assumed REST API).
 - Authentication flow details (JWT tokens stored in localStorage).
-- Specific models used for embeddings (assumed sentence transformers).
 - Deployment details (Docker Compose orchestrates containers).
 
 ---
@@ -153,11 +149,10 @@ This project implements a **full-stack AI chat application** with a modular, lay
 This architecture is a **multi-container, layered system** with:
 - A **Next.js frontend** for user interaction.
 - A **Spring Boot backend** providing REST APIs for conversation management.
-- An **AI service** built with FastAPI, handling embedding, retrieval (RAG), and LLM calls.
-- A **vector store** (FAISS or fallback) for efficient similarity search.
-- External dependencies include OpenAI SDK, FAISS, and a database (PostgreSQL/H2).
+- An **AI service** built with FastAPI and **LangChain**, handling embedding, retrieval (RAG), and LLM calls via LCEL chains.
+- A **Qdrant vector database** for efficient similarity search and long-term context memory.
 
-The system emphasizes **modularity, scalability, and extensibility**, with clear separation of concerns across presentation, API, core logic, and data storage layers.
+The system emphasizes **modularity, scalability, and extensibility**, leveraging the LangChain ecosystem to provide a robust and flexible AI processing layer.
 
 ---
 

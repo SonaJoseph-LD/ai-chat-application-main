@@ -6,18 +6,18 @@ This project is a full-stack AI chat application that utilizes context memory fo
 
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, React Query
 - **Backend**: Java Spring Boot, PostgreSQL, JPA/Hibernate, JWT Authentication
-- **AI Service**: Python FastAPI, OpenAI API (or local Ollama), Qdrant Vector Database, Sentence-Transformers
+- **AI Service**: Python FastAPI, LangChain, OpenAI API (or local Ollama), Qdrant Vector Database, HuggingFace Embeddings
 
 ## Core Features
 
 1. **Chat System**: 
    - Create and manage conversations
    - Send messages and receive AI responses
-   - Intelligent RAG-based context injection
+   - Intelligent RAG-based context injection using LangChain LCEL chains
 
 2. **Context Memory (Qdrant RAG)**:
-   - Real-time vector embeddings using `all-MiniLM-L6-v2`
-   - High-performance similarity search with Qdrant
+   - Real-time vector embeddings using LangChain and HuggingFace (`all-MiniLM-L6-v2`)
+   - High-performance similarity search with Qdrant and LangChain's `QdrantVectorStore`
    - Persistent storage for long-term conversation context
 
 3. **AI Operation Visibility**:
