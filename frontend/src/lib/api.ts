@@ -59,16 +59,33 @@ export const fetchConversations = async (): Promise<any[]> => {
   return response.json();
 };
 
-export const createConversation = async (title: string): Promise<any> => {
-  const response = await fetch(`${API_BASE_URL}/conversations`, {
+export const uploadFile = async (file: File): Promise<any> => {
+  const user = getUser();
+  if (!user || !user.id) {
+    throw new Error('User not authenticated');
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('userId', user.id.toString());
+
+  const token = getToken();
+  const headers: any = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/files/upload`, {
     method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ title }),
+    headers: headers,
+    body: formData,
   });
 
   if (!response.ok) {
-    throw new Error('Failed to create conversation');
+    const errorText = await response.text();
+    throw new Error(errorText || 'Failed to upload file');
   }
 
   return response.json();
 };
+

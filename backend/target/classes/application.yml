@@ -15,7 +15,7 @@ server:
 
 jwt:
   secret: your_jwt_secret
-  expiration: 3600
+  expiration: 86400
 
 ai:
   service:
