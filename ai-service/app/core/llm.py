@@ -13,7 +13,7 @@ class LLMClient:
             self.model = "gpt-3.5-turbo"
         else:
             self.api_url = "http://localhost:11434/api/chat"
-            self.model = "tinyllama"
+            self.model = "llama3.2"
             print(f"Using local Ollama at {self.api_url}")
 
     async def generate_response(self, prompt: str, temperature: float = 0.7) -> str:

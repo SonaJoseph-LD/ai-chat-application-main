@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import ChatWindow from '../../components/ChatWindow';
 import InputBox from '../../components/InputBox';
-import { fetchMessages, sendMessage } from '../../lib/api';
+import { fetchMessages } from '../../lib/api';
 import { Message, User } from '../../types';
 import { getUser } from '../../lib/auth';
 
@@ -13,6 +13,7 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
 
   useEffect(() => {
     const loggedInUser = getUser();
@@ -21,7 +22,7 @@ const ChatPage = () => {
     setConversationId('1'); 
   }, []);
 
-  const { data: chatMessages, refetch } = useQuery({
+  const { data: chatMessages } = useQuery({
     queryKey: ['messages', conversationId],
     queryFn: () => fetchMessages(conversationId!),
     enabled: !!conversationId,
@@ -33,26 +34,75 @@ const ChatPage = () => {
     }
   }, [chatMessages]);
 
-  const mutation = useMutation({
-    mutationFn: sendMessage,
-    onMutate: () => {
-      setIsTyping(true);
-    },
-    onSuccess: (newMessage) => {
-      // The newMessage returned from the server will replace our optimistic one 
-      // when we refetch or we can manually append it.
-      // Since we refetch, we'll let the query handle the final state.
-      refetch().then(() => {
-        setIsTyping(false);
-      });
-    },
-    onError: () => {
-      setIsTyping(false);
-    }
-  });
+  useEffect(() => {
+    if (!conversationId || !user) return;
+
+    // Establish WebSocket connection
+    const wsUrl = `ws://localhost:8080/ws-chat?conversationId=${conversationId}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('WebSocket connected to conversation', conversationId);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const received = JSON.parse(event.data);
+        
+        if (received.error) {
+          console.error(received.error);
+          return;
+        }
+
+        setMessages((prev) => {
+          // Prevent duplicates
+          if (prev.some((m) => String(m.id) === String(received.id))) {
+            return prev;
+          }
+
+          // Filter out matching optimistic temp message
+          const filtered = prev.filter(
+            (m) => !m.id.toString().startsWith('temp-') || m.content !== received.content
+          );
+
+          return [...filtered, {
+            id: String(received.id),
+            content: received.content,
+            userId: String(received.user?.id || received.userId),
+            conversationId: String(received.conversation?.id || received.conversationId),
+            timestamp: received.timestamp || new Date().toISOString()
+          }];
+        });
+
+        // Hide typing indicator if the message comes from the AI
+        const receivedUserId = String(received.user?.id || received.userId);
+        if (receivedUserId !== String(user.id)) {
+          setIsTyping(false);
+        }
+      } catch (err) {
+        console.error('Error parsing WebSocket message', err);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error('WebSocket error', err);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+
+    setSocket(ws);
+
+    return () => {
+      ws.close();
+    };
+  }, [conversationId, user]);
 
   const handleSendMessage = async (text: string) => {
-    if (conversationId && user) {
+    if (conversationId && user && socket && socket.readyState === WebSocket.OPEN) {
+      setIsTyping(true);
+
       // Optimistically add user message to the UI immediately
       const optimisticMessage: Message = {
         id: `temp-${Date.now()}`,
@@ -64,8 +114,13 @@ const ChatPage = () => {
       
       setMessages((prev) => [...prev, optimisticMessage]);
       
-      // Trigger the mutation
-      mutation.mutate({ conversationId, text });
+      // Send message via WebSocket
+      const payload = {
+        content: text,
+        conversationId: Number(conversationId),
+        userId: Number(user.id)
+      };
+      socket.send(JSON.stringify(payload));
     }
   };
 

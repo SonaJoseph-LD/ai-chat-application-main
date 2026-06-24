@@ -13,7 +13,7 @@ export const metadata = {
 
 const RootLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en" className={inter.className} suppressHydrationWarning>
       <Providers>
         <body className="flex h-screen overflow-hidden">
           <Sidebar />
