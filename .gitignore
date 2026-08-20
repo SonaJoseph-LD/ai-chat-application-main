@@ -18,6 +18,9 @@ yarn-error.log*
 out/
 .env*
 dist/
+*.sqlite
+*.sqlite3
+*.sqlite-journal
 
 # Python
 __pycache__/

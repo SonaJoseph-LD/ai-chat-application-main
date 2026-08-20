@@ -5,7 +5,7 @@ This project is a full-stack AI chat application that utilizes context memory fo
 ## Tech Stack
 
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, React Query
-- **Backend**: Java Spring Boot, PostgreSQL, JPA/Hibernate, JWT Authentication
+- **Backend**: Node.js, Express, TypeScript, WebSockets, PostgreSQL / SQLite, JWT Authentication
 - **AI Service**: Python FastAPI, OpenAI API (or local Ollama), Qdrant Vector Database, Sentence-Transformers
 
 ## Core Features
@@ -79,9 +79,13 @@ ai-chat-rag-starter
      ```
      cd backend
      ```
-   - Build and run the Spring Boot application:
+   - Install dependencies:
      ```
-     ./mvnw spring-boot:run
+     npm install
+     ```
+   - Run in development mode:
+     ```
+     npm run dev
      ```
 
 4. **AI Service Setup**:

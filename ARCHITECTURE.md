@@ -1,6 +1,6 @@
 # High-Level Architectural Summary
 
-This project implements a **full-stack AI chat application** with a modular, layered architecture comprising distinct containers for frontend, backend, and AI services. The system integrates a web client (Next.js), a backend API (Spring Boot), and an AI processing layer (FastAPI with LLM and RAG components). The architecture emphasizes separation of concerns, extensibility, and efficient retrieval of contextual information via vector similarity search.
+This project implements a **full-stack AI chat application** with a modular, layered architecture comprising distinct containers for frontend, backend, and AI services. The system integrates a web client (Next.js), a backend API (Node.js / Express), and an AI processing layer (FastAPI with LLM and RAG components). The architecture emphasizes separation of concerns, extensibility, and efficient retrieval of contextual information via vector similarity search.
 
 ---
 
@@ -12,20 +12,21 @@ This project implements a **full-stack AI chat application** with a modular, lay
   - Layout, Sidebar, ChatWindow, MessageBubble, InputBox, Providers.
 - **Interactions:**
   - Calls REST API endpoints to fetch conversations/messages.
-  - Sends user messages to backend via API.
+  - Sends user messages to backend via API / WebSockets.
   - Uses React Query for state management and data fetching.
 - **External Dependencies:** Tailwind CSS, React, Next.js.
 
-### 1.2 Backend (Spring Boot)
-- **Purpose:** Core API server handling authentication, conversation, and message management.
+### 1.2 Backend (Node.js / Express / TypeScript)
+- **Purpose:** Core API server handling authentication, conversation, real-time WebSockets, and message management.
 - **Key Components:**
-  - REST controllers for conversations, messages, auth.
-  - Data persistence via JPA (PostgreSQL or H2 for testing).
-  - Security via JWT tokens.
+  - REST controllers and routes for conversations, messages, auth, and files.
+  - Real-time WebSocket server (`/ws-chat`).
+  - Data persistence via PostgreSQL (with SQLite fallback for local development).
+  - Security via JWT tokens and bcrypt password hashing.
 - **Interactions:**
   - Provides endpoints for frontend to manage conversations/messages.
-  - Acts as a gateway to the AI service for chat processing.
-- **External Dependencies:** PostgreSQL, H2, Spring Security, JWT.
+  - Acts as a gateway to the AI service for chat processing and document uploads.
+- **External Dependencies:** PostgreSQL / SQLite, Express, JWT, WebSockets (`ws`), Multer, Axios.
 
 ### 1.3 AI Service (FastAPI)
 - **Purpose:** Handles AI chat logic, including prompt generation, embedding, retrieval, and LLM API calls.
@@ -152,10 +153,10 @@ This project implements a **full-stack AI chat application** with a modular, lay
 
 This architecture is a **multi-container, layered system** with:
 - A **Next.js frontend** for user interaction.
-- A **Spring Boot backend** providing REST APIs for conversation management.
+- A **Node.js / Express backend** providing REST APIs and WebSockets for conversation management.
 - An **AI service** built with FastAPI, handling embedding, retrieval (RAG), and LLM calls.
-- A **vector store** (FAISS or fallback) for efficient similarity search.
-- External dependencies include OpenAI SDK, FAISS, and a database (PostgreSQL/H2).
+- A **vector store** (Qdrant / FAISS) for efficient similarity search.
+- External dependencies include OpenAI SDK, Qdrant, and a database (PostgreSQL/SQLite).
 
 The system emphasizes **modularity, scalability, and extensibility**, with clear separation of concerns across presentation, API, core logic, and data storage layers.
 

@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+dist
+.git
+.env
+chatdb.sqlite
+tests
+coverage

@@ -1,4 +1,4 @@
-[tool]
+[tool.poetry]
 name = "ai-chat-rag-starter"
 version = "0.1.0"
 description = "A full-stack AI chat application with context memory (RAG)"
