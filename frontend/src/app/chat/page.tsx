@@ -4,12 +4,15 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ChatWindow from '../../components/ChatWindow';
 import InputBox from '../../components/InputBox';
-import { fetchMessages } from '../../lib/api';
+import { useRouter } from 'next/navigation';
+import { fetchMessages, fetchConversations } from '../../lib/api';
 import { Message, User } from '../../types';
 import { getUser } from '../../lib/auth';
+import { useChatStore } from '../../store';
 
 const ChatPage = () => {
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const router = useRouter();
+  const { activeConversationId, setActiveConversationId } = useChatStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -17,32 +20,51 @@ const ChatPage = () => {
 
   useEffect(() => {
     const loggedInUser = getUser();
+    if (!loggedInUser) {
+      router.push('/login');
+      return;
+    }
     setUser(loggedInUser);
-    // In a real app, this would come from the URL or a selection in the Sidebar
-    setConversationId('1'); 
-  }, []);
+  }, [router]);
+
+  const { data: conversations } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: fetchConversations,
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (conversations && conversations.length > 0) {
+      const exists = conversations.some((c: any) => String(c.id) === String(activeConversationId));
+      if (!activeConversationId || !exists) {
+        setActiveConversationId(String(conversations[0].id));
+      }
+    }
+  }, [conversations, activeConversationId, setActiveConversationId]);
 
   const { data: chatMessages } = useQuery({
-    queryKey: ['messages', conversationId],
-    queryFn: () => fetchMessages(conversationId!),
-    enabled: !!conversationId,
+    queryKey: ['messages', activeConversationId],
+    queryFn: () => fetchMessages(activeConversationId!),
+    enabled: !!activeConversationId,
   });
 
   useEffect(() => {
     if (chatMessages) {
       setMessages(chatMessages);
+    } else {
+      setMessages([]);
     }
-  }, [chatMessages]);
+  }, [chatMessages, activeConversationId]);
 
   useEffect(() => {
-    if (!conversationId || !user) return;
+    if (!activeConversationId || !user) return;
 
     // Establish WebSocket connection
-    const wsUrl = `ws://localhost:8080/ws-chat?conversationId=${conversationId}`;
+    const wsUrl = `ws://localhost:8080/ws-chat?conversationId=${activeConversationId}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-      console.log('WebSocket connected to conversation', conversationId);
+      console.log('WebSocket connected to conversation', activeConversationId);
     };
 
     ws.onmessage = (event) => {
@@ -97,10 +119,10 @@ const ChatPage = () => {
     return () => {
       ws.close();
     };
-  }, [conversationId, user]);
+  }, [activeConversationId, user]);
 
   const handleSendMessage = async (text: string) => {
-    if (conversationId && user && socket && socket.readyState === WebSocket.OPEN) {
+    if (activeConversationId && user && socket && socket.readyState === WebSocket.OPEN) {
       setIsTyping(true);
 
       // Optimistically add user message to the UI immediately
@@ -108,7 +130,7 @@ const ChatPage = () => {
         id: `temp-${Date.now()}`,
         content: text,
         userId: user.id,
-        conversationId: conversationId,
+        conversationId: activeConversationId,
         timestamp: new Date().toISOString()
       };
       
@@ -117,20 +139,26 @@ const ChatPage = () => {
       // Send message via WebSocket
       const payload = {
         content: text,
-        conversationId: Number(conversationId),
+        conversationId: Number(activeConversationId),
         userId: Number(user.id)
       };
       socket.send(JSON.stringify(payload));
     }
   };
 
+  const activeConv = conversations?.find((c: any) => String(c.id) === String(activeConversationId));
+
   return (
     <div className="flex flex-col h-full bg-gray-50 max-w-4xl mx-auto shadow-sm border-x border-gray-200">
-      <div className="bg-white border-b border-gray-200 p-4 sticky top-0 z-10">
-        <h2 className="text-xl font-semibold text-gray-800">Current Conversation</h2>
-        <div className="flex items-center text-xs text-green-500 mt-1">
-          <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></span>
-          AI Assistant Online
+      <div className="bg-white border-b border-gray-200 p-4 sticky top-0 z-10 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800">
+            {activeConv?.title || 'Current Conversation'}
+          </h2>
+          <div className="flex items-center text-xs text-green-500 mt-1">
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></span>
+            AI Assistant Online
+          </div>
         </div>
       </div>
       

@@ -4,11 +4,16 @@ import { ConversationResponse } from '../models/Conversation';
 import { MessageResponse } from '../models/Message';
 
 export class ConversationService {
-  public async getAllConversations(): Promise<ConversationResponse[]> {
+  public async getAllConversations(userId?: number): Promise<ConversationResponse[]> {
     const convRepo = getConversationRepository();
+    const userRepo = getUserRepository();
 
-    const conversations = await convRepo.find({
+    const whereClause = userId ? { user: { id: userId } } : {};
+
+    let conversations = await convRepo.find({
+      where: whereClause,
       relations: {
+        user: true,
         messages: {
           user: true,
         },
@@ -17,6 +22,19 @@ export class ConversationService {
         id: 'ASC',
       },
     });
+
+    // If a logged-in user has no conversations yet, create an initial default one
+    if (userId && conversations.length === 0) {
+      const user = await userRepo.findOneBy({ id: userId });
+      if (user) {
+        const defaultConv = convRepo.create({
+          title: 'New Conversation',
+          user,
+        });
+        const saved = await convRepo.save(defaultConv);
+        conversations = [saved];
+      }
+    }
 
     return conversations.map((conv) => {
       const messages: MessageResponse[] = (conv.messages || []).map((m) => ({

@@ -6,7 +6,8 @@ import { CreateConversationRequest } from '../models/Conversation';
 export class ConversationController {
   public async getAllConversations(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const conversations = await conversationService.getAllConversations();
+      const userId = req.user?.id;
+      const conversations = await conversationService.getAllConversations(userId);
       res.status(200).json(conversations);
     } catch (error: any) {
       res.status(500).json({ error: error.message || 'Failed to retrieve conversations' });

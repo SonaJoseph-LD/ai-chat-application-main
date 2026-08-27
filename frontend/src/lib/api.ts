@@ -59,6 +59,20 @@ export const fetchConversations = async (): Promise<any[]> => {
   return response.json();
 };
 
+export const createConversation = async (title: string = 'New Chat'): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/conversations`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ title }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to create conversation');
+  }
+
+  return response.json();
+};
+
 export const uploadFile = async (file: File): Promise<any> => {
   const user = getUser();
   if (!user || !user.id) {
